@@ -115,9 +115,24 @@
 //!
 //! ## sector header
 //!
+//!   magic:    u16
+//!   version:  u16
+//!   sequence: u32
+//!
 //! ## transaction header
 //!
+//!   magic:   u16
+//!   version: u16
+//!   length:  u16
+//!   
 //! ## item
+//!
+//!   magic: u16
+//!   kind:  u32
+//!
+//!  2 kinds of magic: 
+//!   - log
+//!   - value
 
 pub struct SectorSpec {
     /// sector number
