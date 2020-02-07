@@ -95,6 +95,7 @@
 //!
 //! - erase to 1
 //! - after 181 writes to addresses in the same block, must be erased
+//!   - 512/181 ~= 2.8287
 //! - write to 0
 //! - write after write allowed, but keep in mind 181 write limit.
 //! - blocks are 512 bytes
@@ -117,6 +118,7 @@
 //!
 //!   magic:    u16
 //!   version:  u16
+//!   erase_ct: u32
 //!   sequence: u32
 //!
 //! ## transaction header
@@ -135,8 +137,6 @@
 //!   - value
 
 pub struct SectorSpec {
-    /// sector number
-    pub num: usize,
     /// base address of this sector
     pub addr: usize,
     /// bytes in this sector
@@ -147,25 +147,53 @@ pub enum ProgramError {
     /// Attempt to move a bit back to it's erased state
     BitUnsetAttempt,
     /// In some cases, writes before erase is limited
-    ToManyWrites,
+    TooManyWrites,
     /// Some flash types forbid writing over data at all, and will emit this error
     WriteAfterWrite,
     /// Many flash devices require that writes be aligned (at least to their size)
     WriteUnaligned,
 }
 
-pub trait Flash {
-    /// get all sectors provided by this flash device
-    ///
-    // TODO: we can represent this much more compactly
-    fn sectors(&self) -> Vec<SectorSpec>;
+pub enum FlashOpKind {
+    Erase { sector: usize },
+    Program { sector: usize, addr: usize, data: &[u8] },
+}
 
+pub struct FlashOp {
+    // XXX: need intrusive list
+
+    kind: FlashOpKind,
+
+    // XXX: in C, we presume that the callback can use `container_of` on the `FlashOp` parameter to
+    // obtain a reference to their data. It might be reasonable to provide a field to contain it
+    // instead
+    //
+    // XXX: consider if we can without-cost support a Fn type here instead of a basic function
+    callback: fn(Pin<FlashOp>, &mut Flash, Result<(), ProgramError>),
+}
+
+/// Abstract flash API
+pub trait Flash {
+    // XXX: consider using an associated value? or maybe a marker type?
     /// Does this erase to 0 or 1?
     fn erases_to_zero(&self) -> bool;
 
+    fn run_op(&mut self, op: Pin<FlashOp>);
+
     /// erase a given sector
+    //
+    // XXX: ASYNC!
     fn erase_sector(&mut self, sector: usize) -> Result<(),()>;
 
     /// program some piece of a sector
+    //
+    // XXX: ASYNC! we won't know result until later
     fn program(&mut self, sector: usize, addr: usize, data: &[u8]) -> Result<(), ProgramError>;
+}
+
+/// Mtxn - a transactional kv store
+pub struct Mtxn<F: Flash> {
+    flash: F, 
+
+    //
 }
