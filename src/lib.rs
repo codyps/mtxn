@@ -169,7 +169,7 @@ pub struct FlashOp {
     // instead
     //
     // XXX: consider if we can without-cost support a Fn type here instead of a basic function
-    callback: fn(Pin<FlashOp>, &mut Flash, Result<(), ProgramError>),
+    callback: fn(&mut Pin<FlashOp>, &mut Flash, Result<(), ProgramError>),
 }
 
 /// Abstract flash API
@@ -178,17 +178,8 @@ pub trait Flash {
     /// Does this erase to 0 or 1?
     fn erases_to_zero(&self) -> bool;
 
-    fn run_op(&mut self, op: Pin<FlashOp>);
-
-    /// erase a given sector
-    //
-    // XXX: ASYNC!
-    fn erase_sector(&mut self, sector: usize) -> Result<(),()>;
-
-    /// program some piece of a sector
-    //
-    // XXX: ASYNC! we won't know result until later
-    fn program(&mut self, sector: usize, addr: usize, data: &[u8]) -> Result<(), ProgramError>;
+    /// Execute the given flash op asyncronously
+    fn run_op(&mut self, op: &mut Pin<FlashOp>);
 }
 
 /// Mtxn - a transactional kv store
