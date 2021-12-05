@@ -45,7 +45,7 @@
 //! ## STM32F0xx
 //!  - writes of 16 bit or 32 bit size
 //!  - pages (fixed size sectors), 512B each
-//!  - 
+//!  -
 //!
 //! ## STM32F1
 //!
@@ -55,7 +55,7 @@
 //!  - write after write toward 0 allowed
 //!
 //! ## STM32F3
-//! 
+//!
 //! ## STM32F4
 //!
 //! ## STM32F7
@@ -132,15 +132,16 @@
 //!   magic: u16
 //!   kind:  u32
 //!
-//!  2 kinds of magic: 
+//!  2 kinds of magic:
 //!   - log
 //!   - value
+use std::pin::Pin;
 
 pub struct SectorSpec {
     /// base address of this sector
     pub addr: usize,
     /// bytes in this sector
-    pub len:  usize,
+    pub len: usize,
 }
 
 pub enum ProgramError {
@@ -154,22 +155,28 @@ pub enum ProgramError {
     WriteUnaligned,
 }
 
-pub enum FlashOpKind {
-    Erase { sector: usize },
-    Program { sector: usize, addr: usize, data: &[u8] },
+// need some type of "owned buffer" here to make this reasonable to use
+pub enum FlashOpKind<'a> {
+    Erase {
+        sector: usize,
+    },
+    Program {
+        sector: usize,
+        addr: usize,
+        data: &'a [u8],
+    },
 }
 
-pub struct FlashOp {
+pub struct FlashOp<'a> {
     // XXX: need intrusive list
-
-    kind: FlashOpKind,
+    _kind: FlashOpKind<'a>,
 
     // XXX: in C, we presume that the callback can use `container_of` on the `FlashOp` parameter to
     // obtain a reference to their data. It might be reasonable to provide a field to contain it
     // instead
     //
     // XXX: consider if we can without-cost support a Fn type here instead of a basic function
-    callback: fn(&mut Pin<FlashOp>, &mut Flash, Result<(), ProgramError>),
+    _callback: fn(&mut Pin<FlashOp>, &mut dyn Flash, Result<(), ProgramError>),
 }
 
 /// Abstract flash API
@@ -184,7 +191,6 @@ pub trait Flash {
 
 /// Mtxn - a transactional kv store
 pub struct Mtxn<F: Flash> {
-    flash: F, 
-
+    _flash: F,
     //
 }
